@@ -1,0 +1,225 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>particle_filter_for_PZND_model</title><meta name="generator" content="MATLAB 9.1"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2016-12-11"><meta name="DC.source" content="particle_filter_for_PZND_model.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><pre class="codeinput">load <span class="string">PZND_time_series_4</span>
+K=20000;
+Pparts=zeros(length(tt),K);
+Zparts=Pparts;
+Dparts=Pparts;
+Nparts=Pparts;
+gammaparts=Pparts;
+PZND_init=[0.15; 0.06; 0.65; 0.14];
+sig=0.02;
+Pparts(1,:)=PZND_init(1)+sig*randn(1,K);
+Zparts(1,:)=PZND_init(2)+sig*randn(1,K);
+Nparts(1,:)=PZND_init(3)+sig*randn(1,K);
+
+Nresamp=[];
+minP=0.0018;
+Nt=length(tt);
+<span class="keyword">for</span> j=1:K
+    <span class="keyword">if</span> Zparts(1,j)&lt;=0
+        Zparts(1,j)=minP;
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+w=ones(1,K)/K;
+
+Dparts(1,:)=1-Pparts(1,:)-Zparts(1,:)-Nparts(1,:);
+gammaparts(1,:)=0.1+0.1*rand(1,K);
+wsave=0*Pparts;
+wsave(1,:)=w;
+
+figure
+axis([0 1 0 kk])
+hold <span class="string">on</span>
+</pre><img vspace="5" hspace="5" src="particle_filter_for_PZND_model_01.png" alt=""> <p>Plot values of P Z N D gamma as we run through the loop</p><pre class="codeinput"><span class="keyword">for</span> kk=1:Nt-1<span class="comment">%length(t)</span>
+</pre><pre class="codeinput">    kk; <span class="comment">%to see where what observation we are on in the loop</span>
+</pre><p>[t, y] = ode45(func, t_span, y0) -- the syntax used here</p><pre class="codeinput">    [t,PZNDg]=ode45(@RHS_eqs,[tt(kk) tt(kk+1)],[Pparts(kk,:), Zparts(kk,:), Nparts(kk,:), Dparts(kk,:), gammaparts(kk,:)]);
+</pre><pre class="codeinput">    Pparts(kk+1,:)=PZNDg(end,1:K);
+    Zparts(kk+1,:)=PZNDg(end,K+1:2*K);
+    Nparts(kk+1,:)=PZNDg(end,2*K+1:3*K);
+    Dparts(kk+1,:)=PZNDg(end,3*K+1:4*K);
+    gammaparts(kk+1,:)=gammaparts(kk,:);
+
+    infl=2; <span class="comment">%inflation facotor, feel free to change, needs to be &gt;=1</span>
+</pre><p>plot(1:2000,Pparts(kk,:),'.', 'MarkerSize', 10); drawnow</p><p>w = we^(-(P_mod-P_data)^2)/2*infl*sig^2</p><pre class="codeinput">    w=w.*exp(-(Pparts(kk+1,:)-Pdata(kk+1)).^2/(2*infl*sig^2));
+    w=w/sum(w);
+    Keff=1/(sum(w.^2));
+</pre><pre class="codeinput">    <span class="keyword">if</span> Keff&lt;400 <span class="comment">%threshold for effective particle number, should be 1%-5% of K</span>
+        Nresamp=[Nresamp, kk];
+        samps=randsample(K,K,<span class="string">'true'</span>,w);
+        <span class="comment">%resampling</span>
+        gammaparts(kk+1,1:K/2)=gammaparts(kk+1,samps(1:K/2))+0.01*randn(1,K/2);
+             <span class="keyword">for</span> jj=1:K/2
+                <span class="keyword">if</span> gammaparts(kk+1,jj)&gt;0.2 || gammaparts(kk+1,jj)&lt;0.1
+                    gammaparts(kk+1,jj)=gammaparts(kk,jj);
+                <span class="keyword">end</span>
+             <span class="keyword">end</span>
+        gammaparts(kk+1,K/2+1:end)=0.1+0.1*rand(1,K/2); <span class="comment">% set this half back to uniform from 0.1 to 0.2</span>
+        Pparts(kk+1,:)=Pparts(kk+1,samps);
+        Dparts(kk+1,:)=Dparts(kk+1,samps);
+        Zparts(kk+1,:)=Zparts(kk+1,samps);
+        Nparts(kk+1,:)=Nparts(kk+1,samps);
+        w=ones(1,K)/K;
+    <span class="keyword">end</span>
+    wsave(kk+1,:)=w;
+</pre><pre class="codeoutput error">Error using plot
+Not enough input arguments.
+
+Error in particle_filter_for_PZND_model (line 83)
+ plot 
+</pre><pre class="codeinput"><span class="keyword">end</span>
+ plot
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2016b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+load PZND_time_series_4
+K=20000;
+Pparts=zeros(length(tt),K);
+Zparts=Pparts;
+Dparts=Pparts;
+Nparts=Pparts;
+gammaparts=Pparts;
+PZND_init=[0.15; 0.06; 0.65; 0.14];
+sig=0.02;
+Pparts(1,:)=PZND_init(1)+sig*randn(1,K);
+Zparts(1,:)=PZND_init(2)+sig*randn(1,K);
+Nparts(1,:)=PZND_init(3)+sig*randn(1,K);
+
+Nresamp=[];
+minP=0.0018;
+Nt=length(tt);
+for j=1:K
+    if Zparts(1,j)<=0
+        Zparts(1,j)=minP;
+    end
+end
+w=ones(1,K)/K;
+
+Dparts(1,:)=1-Pparts(1,:)-Zparts(1,:)-Nparts(1,:);
+gammaparts(1,:)=0.1+0.1*rand(1,K);
+wsave=0*Pparts;
+wsave(1,:)=w;
+
+figure
+axis([0 1 0 kk])
+hold on
+%%
+% Plot values of P Z N D gamma as we run through the loop
+%%
+for kk=1:Nt-1%length(t)
+    kk; %to see where what observation we are on in the loop
+    %%
+    % [t, y] = ode45(func, t_span, y0) REPLACE_WITH_DASH_DASH the syntax used here
+    % 
+    %%
+    [t,PZNDg]=ode45(@RHS_eqs,[tt(kk) tt(kk+1)],[Pparts(kk,:), Zparts(kk,:), Nparts(kk,:), Dparts(kk,:), gammaparts(kk,:)]);
+    %%
+    % 
+    %
+    %%
+    Pparts(kk+1,:)=PZNDg(end,1:K); 
+    Zparts(kk+1,:)=PZNDg(end,K+1:2*K);
+    Nparts(kk+1,:)=PZNDg(end,2*K+1:3*K);
+    Dparts(kk+1,:)=PZNDg(end,3*K+1:4*K);
+    gammaparts(kk+1,:)=gammaparts(kk,:);
+
+    infl=2; %inflation facotor, feel free to change, needs to be >=1
+    
+    %%
+    % plot(1:2000,Pparts(kk,:),'.', 'MarkerSize', 10);
+    % drawnow
+    %%
+    % w = we^(-(P_mod-P_data)^2)/2*infl*sig^2
+    %%
+    w=w.*exp(-(Pparts(kk+1,:)-Pdata(kk+1)).^2/(2*infl*sig^2)); 
+    w=w/sum(w);
+    Keff=1/(sum(w.^2));
+    %%
+    if Keff<400 %threshold for effective particle number, should be 1%-5% of K
+        Nresamp=[Nresamp, kk];
+        samps=randsample(K,K,'true',w);
+        %resampling
+        gammaparts(kk+1,1:K/2)=gammaparts(kk+1,samps(1:K/2))+0.01*randn(1,K/2);
+             for jj=1:K/2
+                if gammaparts(kk+1,jj)>0.2 || gammaparts(kk+1,jj)<0.1 
+                    gammaparts(kk+1,jj)=gammaparts(kk,jj);
+                end
+             end
+        gammaparts(kk+1,K/2+1:end)=0.1+0.1*rand(1,K/2); % set this half back to uniform from 0.1 to 0.2
+        Pparts(kk+1,:)=Pparts(kk+1,samps);
+        Dparts(kk+1,:)=Dparts(kk+1,samps);
+        Zparts(kk+1,:)=Zparts(kk+1,samps);
+        Nparts(kk+1,:)=Nparts(kk+1,samps);
+        w=ones(1,K)/K;
+    end 
+    wsave(kk+1,:)=w;
+end    
+ plot 
+
+##### SOURCE END #####
+--></body></html>
